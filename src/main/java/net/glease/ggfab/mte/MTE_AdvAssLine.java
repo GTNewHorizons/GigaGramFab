@@ -17,6 +17,7 @@ import gregtech.api.util.*;
 import mcp.mobius.waila.api.IWailaConfigHandler;
 import mcp.mobius.waila.api.IWailaDataAccessor;
 import net.glease.ggfab.GGConstants;
+import net.glease.ggfab.util.LaserHelper;
 import net.glease.ggfab.util.OverclockHelper;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -294,9 +295,12 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private void clearCurrentRecipe() {
         currentRecipe = null;
         currentStick = null;
+        stuck = false;
+        baseEUt = 0;
         for (Slice slice : slices) {
             slice.reset();
         }
+        getBaseMetaTileEntity().issueClientUpdate();
     }
 
     @Override
@@ -309,6 +313,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             aNBT.setTag(TAG_KEY_CURRENT_STICK, currentStick.writeToNBT(new NBTTagCompound()));
             aNBT.setInteger("mRecipeHash", currentRecipe.getPersistentHash());
             aNBT.setIntArray(TAG_KEY_PROGRESS_TIMES, Arrays.stream(slices).limit(currentRecipe.mInputs.length).mapToInt(s -> s.progress).toArray());
+            aNBT.setBoolean("stuck", stuck);
+            aNBT.setLong("inputV", inputVoltage);
+            aNBT.setLong("inputEU", inputEUt);
+            aNBT.setLong("baseEU", baseEUt);
         }
     }
 
@@ -335,6 +343,15 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             switch (lookupResult.getType()) {
                 case VALID_STACK_AND_VALID_HASH:
                     recipe = lookupResult.getRecipe();
+                    stuck = aNBT.getBoolean("stuck");
+                    inputVoltage = aNBT.getLong("inputV");
+                    inputEUt = aNBT.getLong("inputEU");
+                    baseEUt = aNBT.getLong("baseEU");
+                    if (inputVoltage <= 0 || inputEUt <= 0 || baseEUt <= 0) {
+                        criticalStopMachine();
+                        loadedStack = null;
+                        recipe = null;
+                    }
                     break;
                 case VALID_STACK_AND_VALID_RECIPE:
                     // recipe is there, but it has been changed. to prevent issues, abort the current recipe
@@ -364,10 +381,14 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     @Override
     public boolean checkMachine(IGregTechTileEntity aBaseMetaTileEntity, ItemStack aStack) {
         if (checkMachine()) {
+            long oV = inputVoltage, oEut = inputEUt;
             inputVoltage = Integer.MAX_VALUE;
             inputEUt = 0;
             mEnergyHatches.forEach(this::recordEnergySupplier);
             mExoticEnergyHatches.forEach(this::recordEnergySupplier);
+            if (mMaxProgresstime > 0 && (oV != inputVoltage || oEut != inputEUt)) {
+                criticalStopMachine();
+            }
             return true;
         } else {
             inputVoltage = V[0];
@@ -378,7 +399,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private void recordEnergySupplier(GT_MetaTileEntity_Hatch hatch) {
         if (!isValidMetaTileEntity(hatch))
             return;
-        inputEUt += hatch.maxEUInput() * hatch.maxAmperesIn();
+        inputEUt += hatch.maxEUInput() * LaserHelper.getAmperes(hatch);
         inputVoltage = Math.min(inputVoltage, hatch.maxEUInput());
         if (inputEUt < 0)
             // I'd prefer bullying colen than use bigint
@@ -387,8 +408,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
     @Override
     protected void startRecipeProcessing() {
-        if (!processing)
+        if (!processing) {
             super.startRecipeProcessing();
+            processing = true;
+        }
     }
 
     @Override
@@ -401,7 +424,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
     @Override
     public void onValueUpdate(byte aValue) {
+        boolean oStuck = stuck;
         stuck = (aValue & 1) == 1;
+        if (oStuck != stuck)
+            getBaseMetaTileEntity().issueTextureUpdate();
     }
 
     @Override
@@ -448,7 +474,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (slice.progress > 0)
                 tEUt += baseEUt;
         }
-        mEUt = tEUt;
+        lEUt = tEUt;
 
         if (slices[0].canStart() && getBaseMetaTileEntity().isAllowedToWork()) {
             if (hasAllFluids(currentRecipe)) {
@@ -482,7 +508,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         // If we run into missing buses/hatches or bad inputs, we go to the next data stick.
         // This check only happens if we have a valid up-to-date data stick.
 
-        // Check Inputs allign
+        // Check Inputs align
         int aItemCount = tRecipe.mInputs.length;
         for (int i = 0; i < aItemCount; i++) {
             GT_MetaTileEntity_Hatch_InputBus tInputBus = mInputBusses.get(i);
@@ -498,7 +524,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             }
         }
 
-        // Check Fluid Inputs allign
+        // Check Fluid Inputs align
         if (!hasAllFluids(tRecipe))
             return null;
 
@@ -585,20 +611,17 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                 // then laser overclock if needed
                 if (!mExoticEnergyHatches.isEmpty()) {
                     OverclockHelper.OverclockOutput laserOverclock = OverclockHelper.laserOverclock(lEUt, mMaxProgresstime, inputEUt / recipe.mInputs.length, 0.3f);
-                    if (laserOverclock == null) {
-                        if (GT_Values.D1) {
-                            GT_FML_LOGGER.info("Recipe too OP");
-                        }
-                        continue;
+                    if (laserOverclock != null) {
+                        lEUt = laserOverclock.getEUt();
+                        mMaxProgresstime = laserOverclock.getDuration();
                     }
-                    lEUt = laserOverclock.getEUt();
-                    mMaxProgresstime = laserOverclock.getDuration();
                 }
                 // In case recipe is too OP for that machine
-                if (mMaxProgresstime == Integer.MAX_VALUE - 1 && mEUt == Integer.MAX_VALUE - 1) {
+                if (mMaxProgresstime == Integer.MAX_VALUE - 1 && lEUt == Integer.MAX_VALUE - 1) {
                     if (GT_Values.D1) {
                         GT_FML_LOGGER.info("Recipe too OP");
                     }
+                    mMaxProgresstime = 0;
                     continue;
                 }
                 // correct the recipe duration
@@ -627,10 +650,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
         mOutputItems = new ItemStack[]{recipe.mOutput};
 
-        if (this.mEUt > 0) {
-            this.mEUt = -this.mEUt;
+        if (this.lEUt > 0) {
+            this.lEUt = -this.lEUt;
         }
-        baseEUt = mEUt;
+        baseEUt = lEUt;
         this.mEfficiency = (10000 - (getIdealStatus() - getRepairStatus()) * 1000);
         this.mEfficiencyIncrease = 10000;
         updateSlots();
@@ -681,14 +704,15 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             for (int i = 0, listSize = list.size(); i < listSize; i++) {
                 NBTTagInt t = list.get(i);
                 int progress = t.func_150287_d();
-                if (progress > 20) {
-                    currentTip.add(I18n.format("ggfab.waila.advassline.slice", i + 1, progress / 20, duration / 20));
-                } else if (progress > 0) {
-                    currentTip.add(I18n.format("ggfab.waila.advassline.slice.small", i, progress));
-                } else if (progress == 0) {
-                    currentTip.add(I18n.format("ggfab.waila.advassline.slice.stuck", i));
-                } else
-                    currentTip.add(I18n.format("ggfab.waila.advassline.slice.idle", i));
+                if (progress == 0) {
+                    currentTip.add(I18n.format("ggfab.waila.advassline.slice.stuck", i + 1));
+                } else if (progress < 0) {
+                    currentTip.add(I18n.format("ggfab.waila.advassline.slice.idle", i + 1));
+                } else if (duration > 20) {
+                    currentTip.add(I18n.format("ggfab.waila.advassline.slice", i + 1, (duration - progress) / 20, duration / 20));
+                } else {
+                    currentTip.add(I18n.format("ggfab.waila.advassline.slice.small", i + 1, progress));
+                }
             }
         }
     }
@@ -703,11 +727,6 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         }
         tag.setTag(TAG_KEY_PROGRESS_TIMES, l);
         tag.setInteger("mDuration", mMaxProgresstime / currentRecipe.mInputs.length);
-    }
-
-    @Override
-    public String[] getInfoData() {
-        return super.getInfoData();
     }
 
     private void drainAllFluids(GT_Recipe.GT_Recipe_AssemblyLine recipe) {
