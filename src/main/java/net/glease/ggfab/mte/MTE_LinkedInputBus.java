@@ -168,10 +168,7 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
 
     @Override
     public boolean canExtractItem(int aIndex, ItemStack aStack, int aSide) {
-        return isValidSlot(aIndex)
-                && aStack != null
-                && aIndex < getSizeInventory()
-                && allowPullStack(getBaseMetaTileEntity(), aIndex, (byte) aSide, aStack);
+        return false;
     }
 
     @Override
