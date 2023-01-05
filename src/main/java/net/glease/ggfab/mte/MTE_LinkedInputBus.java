@@ -14,12 +14,15 @@ import gregtech.api.interfaces.ITexture;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.implementations.GT_MetaTileEntity_Hatch_InputBus;
-import gregtech.api.util.GT_TooltipDataCache;
+import gregtech.api.util.GT_OreDictUnificator;
 import gregtech.api.util.GT_Utility;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.StatCollector;
 import net.minecraft.world.WorldSavedData;
 import net.minecraftforge.common.util.Constants;
 
@@ -118,9 +121,10 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
     public void setInventorySlotContents(int aIndex, ItemStack aStack) {
         if (aIndex == getCircuitSlot()) {
             mInventory[0] = GT_Utility.copyAmount(0, aStack);
+            markDirty();
         } else if (mState != State.Blocked && mRealInventory != null) {
             if (aIndex > 0 && aIndex <= SIZE_INVENTORY) {
-                mRealInventory.stacks[aIndex] = aStack;
+                mRealInventory.stacks[aIndex - 1] = aStack;
                 getWorldSave().markDirty();
             }
         }
@@ -140,9 +144,26 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
     public boolean canInsertItem(int aIndex, ItemStack aStack, int aSide) {
         return isValidSlot(aIndex)
                 && aStack != null
-                && aIndex < getSizeInventory()
-                && (mInventory[aIndex] == null || GT_Utility.areStacksEqual(aStack, mInventory[aIndex]))
+                && mRealInventory != null
+                && aIndex > getCircuitSlot()
+                && aIndex < SIZE_INVENTORY + 1
+                && (mRealInventory.stacks[aIndex - 1] == null || GT_Utility.areStacksEqual(aStack, mRealInventory.stacks[aIndex - 1]))
                 && allowPutStack(getBaseMetaTileEntity(), aIndex, (byte) aSide, aStack);
+    }
+
+    @Override
+    public boolean allowPutStack(IGregTechTileEntity aBaseMetaTileEntity, int aIndex, byte aSide, ItemStack aStack) {
+        return aSide == getBaseMetaTileEntity().getFrontFacing()
+                && aIndex != getCircuitSlot()
+                && (mRecipeMap == null || disableFilter || mRecipeMap.containsInput(aStack))
+                && (mRealInventory.disableLimited || limitedAllowPutStack(aIndex, aStack));
+    }
+
+    @Override
+    protected boolean limitedAllowPutStack(int aIndex, ItemStack aStack) {
+        for (int i = 0; i < SIZE_INVENTORY; i++)
+            if (GT_Utility.areStacksEqual(GT_OreDictUnificator.get_nocopy(aStack), mRealInventory.stacks[i])) return i == aIndex - 1;
+        return mRealInventory.stacks[aIndex - 1] == null;
     }
 
     @Override
@@ -181,12 +202,46 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
     }
 
     @Override
-    public void onPostTick(IGregTechTileEntity aBaseMetaTileEntity, long aTimer) {
-        super.onPostTick(aBaseMetaTileEntity, aTimer);
-
+    public void updateSlots() {
+        if (mRealInventory == null) return;
         for (int i = 0; i < mRealInventory.stacks.length; i++) {
             if (mRealInventory.stacks[i] != null && !GT_Utility.isStackValid(mRealInventory.stacks[i]))
                 mRealInventory.stacks[i] = null;
+        }
+        if (!mRealInventory.disableSort) fillStacksIntoFirstSlots();
+        markDirty();
+    }
+
+    @Override
+    protected void fillStacksIntoFirstSlots() {
+        // sanity check
+        if (mRealInventory == null) return;
+        final int L = SIZE_INVENTORY - 1;
+        HashMap<GT_Utility.ItemId, Integer> slots = new HashMap<>(L);
+        HashMap<GT_Utility.ItemId, ItemStack> stacks = new HashMap<>(L);
+        List<GT_Utility.ItemId> order = new ArrayList<>(L);
+        List<Integer> validSlots = new ArrayList<>(L);
+        for (int i = 0; i < L; i++) {
+            if (!isValidSlot(i)) continue;
+            validSlots.add(i);
+            ItemStack s = mRealInventory.stacks[i];
+            if (s == null) continue;
+            GT_Utility.ItemId sID = GT_Utility.ItemId.createNoCopy(s);
+            slots.merge(sID, s.stackSize, Integer::sum);
+            if (!stacks.containsKey(sID)) stacks.put(sID, s);
+            order.add(sID);
+            mRealInventory.stacks[i] = null;
+        }
+        int slotindex = 0;
+        for (GT_Utility.ItemId sID : order) {
+            int toSet = slots.get(sID);
+            if (toSet == 0) continue;
+            int slot = validSlots.get(slotindex);
+            slotindex++;
+            mRealInventory.stacks[slot] = stacks.get(sID).copy();
+            toSet = Math.min(toSet, mRealInventory.stacks[slot].getMaxStackSize());
+            mRealInventory.stacks[slot].stackSize = toSet;
+            slots.merge(sID, toSet, (a, b) -> a - b);
         }
     }
 
@@ -245,6 +300,41 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
         if (mChannel != null) {
             mRealInventory = getWorldSave().get(getRealChannel());
             handler.set(mRealInventory.stacks);
+        }
+    }
+
+    @Override
+    public void onScrewdriverRightClick(byte aSide, EntityPlayer aPlayer, float aX, float aY, float aZ) {
+        if (!getBaseMetaTileEntity()
+                .getCoverBehaviorAtSideNew(aSide)
+                .isGUIClickable(
+                        aSide,
+                        getBaseMetaTileEntity().getCoverIDAtSide(aSide),
+                        getBaseMetaTileEntity().getComplexCoverDataAtSide(aSide),
+                        getBaseMetaTileEntity())) return;
+        if (aPlayer.isSneaking()) {
+            if (this.mRealInventory == null) {
+                aPlayer.addChatMessage(new ChatComponentTranslation("ggfab.info.linked_input_bus.no_channel"));
+                return;
+            }
+            if (mRealInventory.disableSort) {
+                mRealInventory.disableSort = false;
+            } else {
+                if (mRealInventory.disableLimited) {
+                    mRealInventory.disableLimited = false;
+                } else {
+                    mRealInventory.disableSort = true;
+                    mRealInventory.disableLimited = true;
+                }
+            }
+            GT_Utility.sendChatToPlayer(
+                    aPlayer,
+                    StatCollector.translateToLocal("GT5U.hatch.disableSort." + mRealInventory.disableSort) + "   "
+                            + StatCollector.translateToLocal("GT5U.hatch.disableLimited." + mRealInventory.disableLimited));
+        } else {
+            this.disableFilter = !this.disableFilter;
+            GT_Utility.sendChatToPlayer(
+                    aPlayer, StatCollector.translateToLocal("GT5U.hatch.disableFilter." + this.disableFilter));
         }
     }
 
@@ -332,6 +422,8 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
          * Inventory wrapper for ModularUI
          */
         private final ItemStackHandler inventoryHandler;
+        public boolean disableLimited = true;
+        public boolean disableSort;
         private boolean used;
         private int ref;
 
@@ -351,6 +443,8 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
             }
 
             ref = tag.getInteger("ref");
+            disableLimited = tag.getBoolean("dl");
+            disableSort = tag.getBoolean("ds");
         }
 
         public NBTTagCompound save() {
@@ -361,6 +455,8 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
                 tag.setTag("" + i, stack.writeToNBT(new NBTTagCompound()));
             }
             tag.setInteger("ref", ref);
+            tag.setBoolean("ds", disableSort);
+            tag.setBoolean("dl", disableLimited);
             return tag;
         }
     }
