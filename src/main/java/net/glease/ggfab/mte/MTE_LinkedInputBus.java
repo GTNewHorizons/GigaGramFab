@@ -39,7 +39,7 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
 
     public MTE_LinkedInputBus(int id, String name, String nameRegional, int tier) {
         super(id, name, nameRegional, tier, 1, new String[]{
-                "16 slot input bus linked together wirelessly",
+                SIZE_INVENTORY + " slot input bus linked together wirelessly",
                 "Link does not cross world boundary"
         });
     }
