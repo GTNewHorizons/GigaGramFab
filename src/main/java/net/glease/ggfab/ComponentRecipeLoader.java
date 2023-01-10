@@ -39,10 +39,12 @@ class ComponentRecipeLoader implements Runnable {
         );
         RA.addAssemblerRecipe(new ItemStack[]{
                         ItemList.Hatch_Input_Bus_IV.get(1L),
-                        GT_OreDictUnificator.get(OrePrefixes.circuit, Materials.Elite, 4L),
+                        ItemList.Emitter_IV.get(1L),
+                        ItemList.Sensor_IV.get(1L),
+                        GT_OreDictUnificator.get(OrePrefixes.plateDense, Materials.Enderium, 1L),
                         GT_Utility.getIntegratedCircuit(12),
                 },
-                Materials.Enderium.getMolten(1296L),
+                Materials.Polybenzimidazole.getMolten(144L),
                 GGItemList.LinkedInputBus.get(1L),
                 600,
                 (int) GT_Values.VP[5]);
