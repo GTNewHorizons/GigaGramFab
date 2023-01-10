@@ -60,9 +60,6 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
 
     @Override
     public void addUIWidgets(ModularWindow.Builder builder, UIBuildContext buildContext) {
-        // hack to clear this shit
-        if (getBaseMetaTileEntity().isClientSide())
-            Arrays.fill(ItemStackHandlerProxy.EMPTY, null);
         builder.widget(new TextFieldWidget()
                         .setSynced(true, true)
                         .setGetter(() -> mChannel == null ? "" : mChannel)
@@ -87,6 +84,11 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
                         .background(getGUITextureSet().getItemSlot())
                         .slotCreator(i -> new BaseSlot(handler, i, false) {
                             @Override
+                            public ItemStack getStack() {
+                                return isEnabled() ? super.getStack() : null;
+                            }
+
+                            @Override
                             public boolean isEnabled() {
                                 return mChannel != null;
                             }
@@ -110,7 +112,7 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
     public ItemStack getStackInSlot(int aIndex) {
         if (aIndex == getCircuitSlot())
             return super.getStackInSlot(aIndex);
-        if (mState != State.Blocked && mRealInventory != null) {
+        if (mState != State.Blocked && mChannel != null && mRealInventory != null) {
             if (aIndex > 0 && aIndex <= SIZE_INVENTORY)
                 return mRealInventory.stacks[aIndex - 1];
         }
@@ -122,7 +124,7 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
         if (aIndex == getCircuitSlot()) {
             mInventory[0] = GT_Utility.copyAmount(0, aStack);
             markDirty();
-        } else if (mState != State.Blocked && mRealInventory != null) {
+        } else if (mState != State.Blocked && mChannel != null && mRealInventory != null) {
             if (aIndex > 0 && aIndex <= SIZE_INVENTORY) {
                 mRealInventory.stacks[aIndex - 1] = aStack;
                 getWorldSave().markDirty();
@@ -144,6 +146,7 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
     public boolean canInsertItem(int aIndex, ItemStack aStack, int aSide) {
         return isValidSlot(aIndex)
                 && aStack != null
+                && mChannel != null
                 && mRealInventory != null
                 && aIndex > getCircuitSlot()
                 && aIndex < SIZE_INVENTORY + 1
@@ -173,7 +176,7 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
 
     @Override
     public int getSizeInventory() {
-        if (mState != State.Blocked && mRealInventory != null)
+        if (mState != State.Blocked && mChannel != null && mRealInventory != null)
             return SIZE_INVENTORY + 1;
         return 1;
     }
@@ -200,26 +203,27 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
 
     @Override
     public void updateSlots() {
-        if (mRealInventory == null) return;
+        if (mChannel == null || mRealInventory == null) return;
         for (int i = 0; i < mRealInventory.stacks.length; i++) {
-            if (mRealInventory.stacks[i] != null && !GT_Utility.isStackValid(mRealInventory.stacks[i]))
+            if (mRealInventory.stacks[i] != null
+                    && (mRealInventory.stacks[i].getItem() == null || mRealInventory.stacks[i].stackSize <= 0))
                 mRealInventory.stacks[i] = null;
         }
         if (!mRealInventory.disableSort) fillStacksIntoFirstSlots();
         markDirty();
+        getWorldSave().markDirty();
     }
 
     @Override
     protected void fillStacksIntoFirstSlots() {
         // sanity check
         if (mRealInventory == null) return;
-        final int L = SIZE_INVENTORY - 1;
+        final int L = SIZE_INVENTORY;
         HashMap<GT_Utility.ItemId, Integer> slots = new HashMap<>(L);
         HashMap<GT_Utility.ItemId, ItemStack> stacks = new HashMap<>(L);
         List<GT_Utility.ItemId> order = new ArrayList<>(L);
         List<Integer> validSlots = new ArrayList<>(L);
         for (int i = 0; i < L; i++) {
-            if (!isValidSlot(i)) continue;
             validSlots.add(i);
             ItemStack s = mRealInventory.stacks[i];
             if (s == null) continue;
