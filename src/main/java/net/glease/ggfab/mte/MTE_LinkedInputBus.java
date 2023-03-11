@@ -400,7 +400,8 @@ public class MTE_LinkedInputBus extends GT_MetaTileEntity_Hatch_InputBus {
         stick.setStackDisplayName("Linked Input Bus configuration");
         // abuse the title mechanism here. I assure you it will be fine (tm).
         GT_Utility.ItemNBT.setBookTitle(stick, "Channel: " + getChannel());
-        GT_Utility.ItemNBT.setBookAuthor(stick, getBaseMetaTileEntity().getOwnerName() == null ? "Mysteriously Unknown Person" : getBaseMetaTileEntity().getOwnerName());
+        if (getBaseMetaTileEntity().getOwnerName() != null)
+            GT_Utility.ItemNBT.setBookAuthor(stick, getBaseMetaTileEntity().getOwnerName());
     }
 
     private String getRealChannel() {
