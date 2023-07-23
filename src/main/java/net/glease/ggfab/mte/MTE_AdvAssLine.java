@@ -29,6 +29,8 @@ import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.jetbrains.annotations.NotNull;
+
 import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructable;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
@@ -42,6 +44,8 @@ import gregtech.api.interfaces.ITexture;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.metatileentity.implementations.*;
+import gregtech.api.recipe.check.CheckRecipeResult;
+import gregtech.api.recipe.check.CheckRecipeResultRegistry;
 import gregtech.api.render.TextureFactory;
 import gregtech.api.util.*;
 import mcp.mobius.waila.api.IWailaConfigHandler;
@@ -466,7 +470,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         }
 
         if (getBaseMetaTileEntity().isAllowedToWork()) {
-            if (hasAllFluids(currentRecipe) && slices[0].start()) {
+            if (hasAllItems(currentRecipe) && hasAllFluids(currentRecipe) && slices[0].start()) {
                 drainAllFluids(currentRecipe);
                 mProgresstime = 0;
             }
@@ -496,22 +500,8 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         // If we run into missing buses/hatches or bad inputs, we go to the next data stick.
         // This check only happens if we have a valid up-to-date data stick.
 
-        // Check Inputs align
-        int aItemCount = tRecipe.mInputs.length;
-        if (mInputBusses.size() < aItemCount) return null;
-        for (int i = 0; i < aItemCount; i++) {
-            GT_MetaTileEntity_Hatch_InputBus tInputBus = mInputBusses.get(i);
-            if (tInputBus == null) {
-                return null;
-            }
-            ItemStack tSlotStack = tInputBus.getStackInSlot(0);
-            int tRequiredStackSize = isStackValidIngredient(tSlotStack, tRecipe.mInputs[i], tRecipe.mOreDictAlt[i]);
-            if (tRequiredStackSize < 0) return null;
-
-            if (GT_Values.D1) {
-                GT_FML_LOGGER.info("Item: " + i + " accepted");
-            }
-        }
+        // Check item Inputs align
+        if (!hasAllItems(tRecipe)) return null;
 
         // Check Fluid Inputs align
         if (!hasAllFluids(tRecipe)) return null;
@@ -523,6 +513,25 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             GT_FML_LOGGER.info("Find available recipe");
         }
         return tRecipe;
+    }
+
+    private boolean hasAllItems(GT_Recipe.GT_Recipe_AssemblyLine tRecipe) {
+        int aItemCount = tRecipe.mInputs.length;
+        if (mInputBusses.size() < aItemCount) return false;
+        for (int i = 0; i < aItemCount; i++) {
+            GT_MetaTileEntity_Hatch_InputBus tInputBus = mInputBusses.get(i);
+            if (tInputBus == null) {
+                return false;
+            }
+            ItemStack tSlotStack = tInputBus.getStackInSlot(0);
+            int tRequiredStackSize = isStackValidIngredient(tSlotStack, tRecipe.mInputs[i], tRecipe.mOreDictAlt[i]);
+            if (tRequiredStackSize < 0) return false;
+
+            if (GT_Values.D1) {
+                GT_FML_LOGGER.info("Item: " + i + " accepted");
+            }
+        }
+        return true;
     }
 
     private boolean hasAllFluids(GT_Recipe.GT_Recipe_AssemblyLine tRecipe) {
@@ -577,14 +586,15 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     // and the first slice cannot find a input/fluid cannot be found
     // so we are safe to assume the old recipe no longer works
     @Override
-    public boolean checkRecipe(ItemStack aStack) {
+    @NotNull
+    public CheckRecipeResult checkProcessing() {
         if (GT_Values.D1) {
             GT_FML_LOGGER.info("Start Adv ALine recipe check");
         }
         clearCurrentRecipe();
         ArrayList<ItemStack> tDataStickList = getDataItems(2);
         if (tDataStickList.isEmpty()) {
-            return false;
+            return CheckRecipeResultRegistry.NO_DATA_STICKS;
         }
         if (GT_Values.D1) {
             GT_FML_LOGGER.info("Stick accepted, " + tDataStickList.size() + " Data Sticks found");
@@ -627,7 +637,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (GT_Values.D1) {
                 GT_FML_LOGGER.info("Did not find a recipe");
             }
-            return false;
+            return CheckRecipeResultRegistry.NO_RECIPE;
         }
 
         if (GT_Values.D1) {
@@ -637,7 +647,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         if (!slices[0].start()) {
             clearCurrentRecipe();
             // something very very wrong...
-            return false;
+            return CheckRecipeResultRegistry.NONE;
         }
         drainAllFluids(recipe);
 
@@ -654,12 +664,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         if (GT_Values.D1) {
             GT_FML_LOGGER.info("Recipe successful");
         }
-        return true;
-    }
-
-    @Override
-    public GT_Recipe.GT_Recipe_Map getRecipeMap() {
-        return null;
+        return CheckRecipeResultRegistry.SUCCESSFUL;
     }
 
     @Override
@@ -733,6 +738,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         tag.setInteger("mDuration", mMaxProgresstime / currentRecipe.mInputs.length);
     }
 
+    /**
+     * Caller is responsible to check and ensure the hatches are there and has all the fluid needed. You will usually
+     * want to ensure hasAllFluid was called right before calling this, otherwise very bad things can happen.
+     */
     private void drainAllFluids(GT_Recipe.GT_Recipe_AssemblyLine recipe) {
         for (int i = 0; i < recipe.mFluidInputs.length; i++) {
             mInputHatches.get(i).drain(ForgeDirection.UNKNOWN, recipe.mFluidInputs[i], true);
