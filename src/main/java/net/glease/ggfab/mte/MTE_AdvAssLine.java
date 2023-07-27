@@ -12,6 +12,7 @@ import static net.glease.ggfab.BlockIcons.*;
 import java.util.*;
 import java.util.stream.IntStream;
 
+import com.gtnewhorizons.modularui.common.widget.FakeSyncWidget;
 import net.glease.ggfab.ConfigurationHandler;
 import net.glease.ggfab.GGConstants;
 import net.glease.ggfab.util.OverclockHelper;
@@ -21,6 +22,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagInt;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentTranslation;
@@ -35,6 +37,11 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizons.modularui.api.drawable.Text;
+import com.gtnewhorizons.modularui.api.widget.ISyncedWidget;
+import com.gtnewhorizons.modularui.common.widget.DynamicPositionedColumn;
+import com.gtnewhorizons.modularui.common.widget.SlotWidget;
+import com.gtnewhorizons.modularui.common.widget.TextWidget;
 
 import gregtech.api.GregTech_API;
 import gregtech.api.enums.GT_Values;
@@ -125,6 +132,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private boolean stuck;
 
     private final ArrayList<GT_MetaTileEntity_Hatch_DataAccess> mDataAccessHatches = new ArrayList<>();
+    private int currentInputLength;
 
     public MTE_AdvAssLine(int aID, String aName, String aNameRegional) {
         super(aID, aName, aNameRegional);
@@ -275,11 +283,13 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private void setCurrentRecipe(ItemStack stick, GT_Recipe.GT_Recipe_AssemblyLine recipe) {
         currentRecipe = recipe;
         currentStick = stick;
+        currentInputLength = recipe.mInputs.length;
     }
 
     private void clearCurrentRecipe() {
         currentRecipe = null;
         currentStick = null;
+        currentInputLength = -1;
         stuck = false;
         baseEUt = 0;
         for (Slice slice : slices) {
@@ -300,7 +310,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             aNBT.setInteger("mRecipeHash", currentRecipe.getPersistentHash());
             aNBT.setIntArray(
                     TAG_KEY_PROGRESS_TIMES,
-                    Arrays.stream(slices).limit(currentRecipe.mInputs.length).mapToInt(s -> s.progress).toArray());
+                    Arrays.stream(slices).limit(currentInputLength).mapToInt(s -> s.progress).toArray());
             aNBT.setBoolean("stuck", stuck);
             aNBT.setLong("inputV", inputVoltage);
             aNBT.setLong("inputEU", inputEUt);
@@ -419,6 +429,19 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     }
 
     @Override
+    protected void drawTexts(DynamicPositionedColumn screenElements, SlotWidget inventorySlot) {
+        super.drawTexts(screenElements, inventorySlot);
+        SliceStatusWidget[] arr = Arrays.stream(slices).map(SliceStatusWidget::new).toArray(SliceStatusWidget[]::new);
+        screenElements.widgets(arr);
+        screenElements.widget(new FakeSyncWidget.IntegerSyncer(() -> currentInputLength, l -> {
+            currentInputLength = l;
+            for (SliceStatusWidget w : arr) {
+                w.updateText();
+            }
+        }));
+    }
+
+    @Override
     public boolean onRunningTick(ItemStack aStack) {
         if (currentRecipe == null) {
             criticalStopMachine();
@@ -428,7 +451,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             hatch_dataAccess.setActive(true);
         }
 
-        if (mInputBusses.size() < currentRecipe.mInputs.length) {
+        if (mInputBusses.size() < currentInputLength) {
             criticalStopMachine();
             return false;
         }
@@ -449,7 +472,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (slice.progress >= 0) {
                 if (!foundWorking) {
                     foundWorking = true;
-                    mProgresstime = (slice.id + 1) * (mMaxProgresstime / currentRecipe.mInputs.length) - slice.progress;
+                    mProgresstime = (slice.id + 1) * (mMaxProgresstime / currentInputLength) - slice.progress;
                 }
             }
             if (slice.progress > 0) working++;
@@ -731,11 +754,11 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         super.getWailaNBTData(player, tile, tag, world, x, y, z);
         if (currentRecipe == null || !getBaseMetaTileEntity().isActive()) return;
         NBTTagList l = new NBTTagList();
-        for (int i = 0; i < currentRecipe.mInputs.length; i++) {
+        for (int i = 0; i < currentInputLength; i++) {
             l.appendTag(new NBTTagInt(slices[i].progress));
         }
         tag.setTag(TAG_KEY_PROGRESS_TIMES, l);
-        tag.setInteger("mDuration", mMaxProgresstime / currentRecipe.mInputs.length);
+        tag.setInteger("mDuration", mMaxProgresstime / currentInputLength);
     }
 
     /**
@@ -769,6 +792,68 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         return -1;
     }
 
+    private class SliceStatusWidget extends TextWidget implements ISyncedWidget {
+
+        private final Slice slice;
+        private int lastProgress = -2;
+        private transient Text text;
+
+        private SliceStatusWidget(Slice slice) {
+            this.slice = slice;
+            updateText();
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return super.isEnabled() && slice.progress <= 0 && currentInputLength > slice.id;
+        }
+
+        @Override
+        public Text getText() {
+            return text;
+        }
+
+        @Override
+        public void readOnClient(int id, PacketBuffer buf) {
+            if (id == 0) {
+                slice.progress = buf.readVarIntFromBuffer();
+                updateText();
+                checkNeedsRebuild();
+            }
+        }
+
+        public void updateText() {
+            String type = "unknown";
+            if (slice.progress == 0) type = "stuck";
+            else if (slice.progress < 0) type = "idle";
+            text = Text.localised("ggfab.gui.advassline.slice." + type, slice.id);
+        }
+
+        @Override
+        public void readOnServer(int id, PacketBuffer buf) {}
+
+        @Override
+        public void detectAndSendChanges(boolean init) {
+            if (slice.progress != lastProgress) {
+                // suppress small normal progress update
+                if (slice.progress > 0 && lastProgress > 0 && lastProgress - slice.progress < 10) return;
+                lastProgress = slice.progress;
+                syncToClient(0, b -> b.writeVarIntToBuffer(slice.progress));
+            }
+        }
+
+        @Override
+        public void markForUpdate() {}
+
+        @Override
+        public void unMarkForUpdate() {}
+
+        @Override
+        public boolean isMarkedForUpdate() {
+            return false;
+        }
+    }
+
     private class Slice {
 
         private final int id;
@@ -786,7 +871,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (progress < 0) return;
             if (progress == 0 || --progress == 0) {
                 // id==0 will be end of chain if 1 input, so we need a +1 here
-                if (id + 1 >= currentRecipe.mInputs.length) {
+                if (id + 1 >= currentInputLength) {
                     addOutput(currentRecipe.mOutput);
                     reset();
                 } else {
@@ -803,7 +888,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             ItemStack stack = bus.getStackInSlot(0);
             int size = isStackValidIngredient(stack, currentRecipe.mInputs[id], currentRecipe.mOreDictAlt[id]);
             if (size < 0) return false;
-            progress = mMaxProgresstime / currentRecipe.mInputs.length;
+            progress = mMaxProgresstime / currentInputLength;
             stack.stackSize -= size;
             bus.updateSlots();
             return true;
