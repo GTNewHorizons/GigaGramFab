@@ -365,10 +365,8 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                     break;
             }
         }
-        if (loadedStack == null || recipe == null)
-            clearCurrentRecipe();
-        else
-            setCurrentRecipe(loadedStack, recipe);
+        if (loadedStack == null || recipe == null) clearCurrentRecipe();
+        else setCurrentRecipe(loadedStack, recipe);
     }
 
     @Override
