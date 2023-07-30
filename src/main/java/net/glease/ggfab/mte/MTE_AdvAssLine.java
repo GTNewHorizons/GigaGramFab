@@ -5,6 +5,7 @@ import static gregtech.GT_Mod.GT_FML_LOGGER;
 import static gregtech.api.enums.GT_HatchElement.*;
 import static gregtech.api.enums.GT_Values.V;
 import static gregtech.api.enums.Textures.BlockIcons.casingTexturePages;
+import static gregtech.api.metatileentity.BaseTileEntity.TOOLTIP_DELAY;
 import static gregtech.api.util.GT_StructureUtility.buildHatchAdder;
 import static gregtech.api.util.GT_StructureUtility.ofHatchAdder;
 import static net.glease.ggfab.BlockIcons.*;
@@ -12,7 +13,6 @@ import static net.glease.ggfab.BlockIcons.*;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import com.gtnewhorizons.modularui.common.widget.FakeSyncWidget;
 import net.glease.ggfab.ConfigurationHandler;
 import net.glease.ggfab.GGConstants;
 import net.glease.ggfab.util.OverclockHelper;
@@ -26,6 +26,7 @@ import net.minecraft.network.PacketBuffer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -37,15 +38,18 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizons.modularui.api.drawable.IDrawable;
 import com.gtnewhorizons.modularui.api.drawable.Text;
+import com.gtnewhorizons.modularui.api.drawable.UITexture;
 import com.gtnewhorizons.modularui.api.widget.ISyncedWidget;
-import com.gtnewhorizons.modularui.common.widget.DynamicPositionedColumn;
-import com.gtnewhorizons.modularui.common.widget.SlotWidget;
-import com.gtnewhorizons.modularui.common.widget.TextWidget;
+import com.gtnewhorizons.modularui.api.widget.IWidgetBuilder;
+import com.gtnewhorizons.modularui.api.widget.Widget;
+import com.gtnewhorizons.modularui.common.widget.*;
 
 import gregtech.api.GregTech_API;
 import gregtech.api.enums.GT_Values;
 import gregtech.api.enums.ItemList;
+import gregtech.api.enums.VoidingMode;
 import gregtech.api.interfaces.IHatchElement;
 import gregtech.api.interfaces.ITexture;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
@@ -361,7 +365,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                     break;
             }
         }
-        setCurrentRecipe(loadedStack, recipe);
+        if (loadedStack == null || recipe == null)
+            clearCurrentRecipe();
+        else
+            setCurrentRecipe(loadedStack, recipe);
     }
 
     @Override
@@ -691,6 +698,37 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     }
 
     @Override
+    public boolean supportsVoidProtection() {
+        return true;
+    }
+
+    @Override
+    public ButtonWidget createVoidExcessButton(IWidgetBuilder<?> builder) {
+        Widget button = new ButtonWidget().setOnClick((clickData, widget) -> {
+            if (supportsVoidProtection()) {
+                if (getVoidingMode() == VoidingMode.VOID_NONE) setVoidingMode(VoidingMode.VOID_ALL);
+                else setVoidingMode(VoidingMode.VOID_NONE);
+                widget.notifyTooltipChange();
+            }
+        }).setPlayClickSound(supportsVoidProtection()).setBackground(() -> {
+            List<UITexture> ret = new ArrayList<>();
+            ret.add(getVoidingMode().buttonTexture);
+            ret.add(getVoidingMode().buttonOverlay);
+            return ret.toArray(new IDrawable[0]);
+        }).attachSyncer(
+                new FakeSyncWidget.IntegerSyncer(
+                        () -> getVoidingMode().ordinal(),
+                        val -> setVoidingMode(VoidingMode.fromOrdinal(val))),
+                builder)
+                .dynamicTooltip(
+                        () -> Arrays.asList(
+                                StatCollector.translateToLocal("GT5U.gui.button.voiding_mode"),
+                                StatCollector.translateToLocal(getVoidingMode().getTransKey())))
+                .setTooltipShowUpDelay(TOOLTIP_DELAY).setPos(getVoidingModeButtonPos()).setSize(16, 16);
+        return (ButtonWidget) button;
+    }
+
+    @Override
     public boolean isCorrectMachinePart(ItemStack aStack) {
         return true;
     }
@@ -872,8 +910,8 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (progress == 0 || --progress == 0) {
                 // id==0 will be end of chain if 1 input, so we need a +1 here
                 if (id + 1 >= currentInputLength) {
-                    addOutput(currentRecipe.mOutput);
-                    reset();
+                    if (addOutput(currentRecipe.mOutput) || !voidingMode.protectItem) reset();
+                    else stuck = true;
                 } else {
                     if (slices[id + 1].start()) reset();
                     else stuck = true;
