@@ -701,29 +701,8 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     }
 
     @Override
-    public ButtonWidget createVoidExcessButton(IWidgetBuilder<?> builder) {
-        Widget button = new ButtonWidget().setOnClick((clickData, widget) -> {
-            if (supportsVoidProtection()) {
-                if (getVoidingMode() == VoidingMode.VOID_NONE) setVoidingMode(VoidingMode.VOID_ALL);
-                else setVoidingMode(VoidingMode.VOID_NONE);
-                widget.notifyTooltipChange();
-            }
-        }).setPlayClickSound(supportsVoidProtection()).setBackground(() -> {
-            List<UITexture> ret = new ArrayList<>();
-            ret.add(getVoidingMode().buttonTexture);
-            ret.add(getVoidingMode().buttonOverlay);
-            return ret.toArray(new IDrawable[0]);
-        }).attachSyncer(
-                new FakeSyncWidget.IntegerSyncer(
-                        () -> getVoidingMode().ordinal(),
-                        val -> setVoidingMode(VoidingMode.fromOrdinal(val))),
-                builder)
-                .dynamicTooltip(
-                        () -> Arrays.asList(
-                                StatCollector.translateToLocal("GT5U.gui.button.voiding_mode"),
-                                StatCollector.translateToLocal(getVoidingMode().getTransKey())))
-                .setTooltipShowUpDelay(TOOLTIP_DELAY).setPos(getVoidingModeButtonPos()).setSize(16, 16);
-        return (ButtonWidget) button;
+    public Set<VoidingMode> getAllowedVoidingModes() {
+        return VoidingMode.ITEM_ONLY_MODES;
     }
 
     @Override
@@ -832,7 +811,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
         private final Slice slice;
         private int lastProgress = -2;
-        private transient Text text;
+        private Text text;
 
         private SliceStatusWidget(Slice slice) {
             this.slice = slice;
