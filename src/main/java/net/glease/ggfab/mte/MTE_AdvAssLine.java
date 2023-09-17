@@ -62,6 +62,7 @@ import mcp.mobius.waila.api.IWailaDataAccessor;
  */
 public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBase<MTE_AdvAssLine>
         implements ISurvivalConstructable {
+
     private static final ItemStack NULL = new ItemStack(Blocks.dirt);
     private static final String STRUCTURE_PIECE_FIRST = "first";
     private static final String STRUCTURE_PIECE_LATER = "later";
