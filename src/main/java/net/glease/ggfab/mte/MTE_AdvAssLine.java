@@ -528,7 +528,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             ItemStack stuff = null;
             if (index < mInputBusses.size()) {
                 GT_MetaTileEntity_Hatch_InputBus bus = mInputBusses.get(index);
-                if (!bus.isValid()) {
+                if (bus.isValid()) {
                     stuff = bus.getStackInSlot(0);
                 }
             }
