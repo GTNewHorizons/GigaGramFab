@@ -1,6 +1,10 @@
 package net.glease.ggfab.api;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 
 import net.glease.ggfab.GGItemList;
 import net.minecraft.item.ItemStack;
