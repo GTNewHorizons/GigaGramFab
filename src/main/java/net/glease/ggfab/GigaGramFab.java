@@ -119,7 +119,7 @@ public class GigaGramFab {
                                     GT_MetaTileEntity_BasicMachine_GT_Recipe.X.GLASS, 'B',
                                     ItemList.Shape_Empty.get(1L) }).getStackForm(1L));
             long plate = OrePrefixes.plate.mMaterialAmount, ingot = OrePrefixes.ingot.mMaterialAmount,
-                    screw = OrePrefixes.screw.mMaterialAmount, rod = OrePrefixes.rod.mMaterialAmount;
+                    screw = OrePrefixes.screw.mMaterialAmount, rod = OrePrefixes.stick.mMaterialAmount;
             GigaGramFabAPI.addSingleUseToolType(craftingToolFile, INSTANCE.mToolStats.get(FILE), 2 * plate);
             GigaGramFabAPI.addSingleUseToolType(craftingToolWrench, INSTANCE.mToolStats.get(WRENCH), 6 * ingot);
             GigaGramFabAPI.addSingleUseToolType(craftingToolCrowbar, INSTANCE.mToolStats.get(CROWBAR), 3 * rod);

@@ -34,6 +34,14 @@ class SingleUseToolRecipeLoader implements Runnable {
         addSingleUseToolRecipe(material, 10000, types);
     }
 
+    private static long findNiceFactor(long fluids, long count) {
+        long end = Math.min(fluids, count);
+        for (long i = count / 256; i < end; i++) {
+            if (fluids % i == 0 && count % i == 0 && count / i < 256) return i;
+        }
+        return -1;
+    }
+
     private void addSingleUseToolRecipe(Materials material, int outputModifier, ToolDictNames... types) {
         if (material.mStandardMoltenFluid == null) {
             throw new IllegalArgumentException("material does not have molten fluid form");
@@ -45,25 +53,32 @@ class SingleUseToolRecipeLoader implements Runnable {
                 throw new IllegalArgumentException(type + " not registered");
             }
             long fluids = cost * GT_Values.L / GT_Values.M, duration = 6 * SECONDS;
-            int count = (int) (material.mDurability * stats.getMaxDurabilityMultiplier()
+            long count = (long) (material.mDurability * stats.getMaxDurabilityMultiplier()
                     * outputModifier
                     * 100
                     / stats.getToolDamagePerContainerCraft()
                     / 10000);
             if (count > 64 * 4) {
-                double mod = (double) count / (64 * 4L);
-                fluids = Math.max((long) (fluids / mod), 1L);
-                duration = Math.max((long) (duration / mod), 1L);
-                count = 64 * 4;
+                long niceFactor = findNiceFactor(fluids, count);
+                if (niceFactor < 0) {
+                    double mod = (double) count / (64 * 4L);
+                    fluids = Math.max((long) (fluids / mod), 1L);
+                    duration = Math.max((long) (duration / mod), 1L);
+                    count = 64 * 4;
+                } else {
+                    fluids /= niceFactor;
+                    duration = Math.max(duration / niceFactor, 1);
+                    count /= niceFactor;
+                }
             } else if (count < 128) {
-                int mod = GT_Utility.ceilDiv(128, count);
+                long mod = GT_Utility.ceilDiv(128, count);
                 fluids *= mod;
                 duration *= mod;
                 count *= mod;
             }
             GT_Values.RA.stdBuilder().fluidInputs(material.getMolten(fluids)) //
                     .metadata(GG_RecipeMaps.OUTPUT_TYPE, type) //
-                    .metadata(GG_RecipeMaps.OUTPUT_COUNT, count) //
+                    .metadata(GG_RecipeMaps.OUTPUT_COUNT, (int) count) //
                     .eut(TierEU.RECIPE_MV).duration(duration) //
                     .addTo(GG_RecipeMaps.sToolCastRecipes);
         }
