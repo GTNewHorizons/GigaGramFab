@@ -40,10 +40,11 @@ class SingleUseToolRecipeLoader implements Runnable {
         }
         for (ToolDictNames type : types) {
             IToolStats stats = GigaGramFabAPI.SINGLE_USE_TOOLS.get(type);
-            if (stats == null) {
+            Long cost = GigaGramFabAPI.COST_SINGLE_USE_TOOLS.get(type);
+            if (stats == null || cost == null) {
                 throw new IllegalArgumentException(type + " not registered");
             }
-            long fluids = 144L, duration = 6 * SECONDS;
+            long fluids = cost * GT_Values.L / GT_Values.M, duration = 6 * SECONDS;
             int count = (int) (material.mDurability * stats.getMaxDurabilityMultiplier()
                     * outputModifier
                     * 100
