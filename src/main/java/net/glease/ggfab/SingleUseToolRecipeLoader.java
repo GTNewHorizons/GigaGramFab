@@ -7,10 +7,12 @@ import net.glease.ggfab.api.GG_RecipeMaps;
 import net.glease.ggfab.api.GigaGramFabAPI;
 
 import gregtech.api.enums.GT_Values;
+import gregtech.api.enums.ItemList;
 import gregtech.api.enums.Materials;
 import gregtech.api.enums.TierEU;
 import gregtech.api.enums.ToolDictNames;
 import gregtech.api.interfaces.IToolStats;
+import gregtech.api.util.GT_ModHandler;
 import gregtech.api.util.GT_Utility;
 
 class SingleUseToolRecipeLoader implements Runnable {
@@ -28,6 +30,17 @@ class SingleUseToolRecipeLoader implements Runnable {
         addSingleUseToolRecipe(Materials.Rubber, softTools);
         addSingleUseToolRecipe(Materials.StyreneButadieneRubber, softTools);
         addSingleUseToolRecipe(Materials.Polybenzimidazole, softTools);
+
+        String prefix = "Shape_One_Use_";
+        for (GGItemList value : GGItemList.values()) {
+            if (!value.name().startsWith(prefix)) {
+                continue;
+            }
+            ToolDictNames type = ToolDictNames.valueOf(value.name().substring(prefix.length()));
+            GT_ModHandler.addCraftingRecipe(
+                    value.get(1L),
+                    new Object[] { "h", "P", "I", 'P', ItemList.Shape_Empty, 'I', type });
+        }
     }
 
     private void addSingleUseToolRecipe(Materials material, ToolDictNames... types) {
