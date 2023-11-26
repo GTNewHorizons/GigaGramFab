@@ -14,7 +14,6 @@ import gregtech.api.util.GT_Utility;
 public enum GGItemList implements IItemContainer {
 
     LinkedInputBus,
-    AdvAssLine,;
     AdvAssLine,
     // region single use tool
     ToolCast_MV,
