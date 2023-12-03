@@ -2,7 +2,7 @@ package net.glease.ggfab;
 
 import static gregtech.api.enums.ToolDictNames.*;
 import static gregtech.common.items.GT_MetaGenerated_Tool_01.*;
-import static net.glease.ggfab.api.GG_RecipeMaps.sToolCastRecipes;
+import static net.glease.ggfab.api.GG_RecipeMaps.toolCastRecipes;
 
 import java.util.stream.IntStream;
 
@@ -10,7 +10,6 @@ import net.glease.ggfab.api.GigaGramFabAPI;
 import net.glease.ggfab.items.GGMetaItem_DumbItems;
 import net.glease.ggfab.mte.MTE_AdvAssLine;
 import net.glease.ggfab.mte.MTE_LinkedInputBus;
-import net.glease.ggfab.nei.IMCForNEI;
 import net.glease.ggfab.util.GGUtils;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -59,13 +58,11 @@ public class GigaGramFab {
                             "Basic Tool Casting Machine",
                             2,
                             "Cheap Crafting Tool for you!",
-                            sToolCastRecipes,
+                            toolCastRecipes,
                             1,
                             4,
                             2400,
                             SoundResource.NONE,
-                            false,
-                            false,
                             GT_MetaTileEntity_BasicMachine_GT_Recipe.SpecialEffects.MAIN_RANDOM_SPARKS,
                             "TOOL_CAST",
                             new Object[] { "PGP", "WMW", "CBC", 'M', GT_MetaTileEntity_BasicMachine_GT_Recipe.X.HULL,
@@ -81,13 +78,11 @@ public class GigaGramFab {
                             "Advanced Tool Casting Machine",
                             3,
                             "Cheap Crafting Tool for you!",
-                            sToolCastRecipes,
+                            toolCastRecipes,
                             1,
                             4,
                             3200,
                             SoundResource.NONE,
-                            false,
-                            false,
                             GT_MetaTileEntity_BasicMachine_GT_Recipe.SpecialEffects.MAIN_RANDOM_SPARKS,
                             "TOOL_CAST",
                             new Object[] { "PGP", "WMW", "CBC", 'M', GT_MetaTileEntity_BasicMachine_GT_Recipe.X.HULL,
@@ -103,13 +98,11 @@ public class GigaGramFab {
                             "Master Tool Casting Machine",
                             4,
                             "Cheap Crafting Tool for you!",
-                            sToolCastRecipes,
+                            toolCastRecipes,
                             1,
                             4,
                             2400,
                             SoundResource.NONE,
-                            false,
-                            false,
                             GT_MetaTileEntity_BasicMachine_GT_Recipe.SpecialEffects.MAIN_RANDOM_SPARKS,
                             "TOOL_CAST",
                             new Object[] { "PGP", "WMW", "CBC", 'M', GT_MetaTileEntity_BasicMachine_GT_Recipe.X.HULL,
@@ -130,7 +123,7 @@ public class GigaGramFab {
             GigaGramFabAPI.addSingleUseToolType(craftingToolHardHammer, INSTANCE.mToolStats.get(HARDHAMMER), 6 * ingot);
             GigaGramFabAPI.addSingleUseToolType(craftingToolSoftHammer, INSTANCE.mToolStats.get(SOFTMALLET), 6 * ingot);
             GigaGramFabAPI.addSingleUseToolType(craftingToolScrewdriver, INSTANCE.mToolStats.get(SCREWDRIVER), 2 * rod);
-            GT_ProcessingArray_Manager.addRecipeMapToPA("ggfab.toolcast", sToolCastRecipes);
+            GT_ProcessingArray_Manager.addRecipeMapToPA("ggfab.toolcast", toolCastRecipes);
         });
         GregTech_API.sBeforeGTPostload.add(new ComponentRecipeLoader());
         GregTech_API.sBeforeGTPostload.add(new SingleUseToolRecipeLoader());
@@ -140,9 +133,7 @@ public class GigaGramFab {
     }
 
     @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
-        IMCForNEI.IMCSender();
-    }
+    public void init(FMLInitializationEvent event) {}
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
