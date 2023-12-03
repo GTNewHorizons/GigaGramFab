@@ -10,7 +10,6 @@ import net.glease.ggfab.api.GigaGramFabAPI;
 import net.glease.ggfab.items.GGMetaItem_DumbItems;
 import net.glease.ggfab.mte.MTE_AdvAssLine;
 import net.glease.ggfab.mte.MTE_LinkedInputBus;
-import net.glease.ggfab.nei.IMCForNEI;
 import net.glease.ggfab.util.GGUtils;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -140,9 +139,7 @@ public class GigaGramFab {
     }
 
     @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
-        IMCForNEI.IMCSender();
-    }
+    public void init(FMLInitializationEvent event) {}
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
