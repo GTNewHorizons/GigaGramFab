@@ -93,7 +93,7 @@ class SingleUseToolRecipeLoader implements Runnable {
                     .metadata(GG_RecipeMaps.OUTPUT_TYPE, type) //
                     .metadata(GG_RecipeMaps.OUTPUT_COUNT, (int) count) //
                     .eut(TierEU.RECIPE_MV).duration(duration) //
-                    .addTo(GG_RecipeMaps.sToolCastRecipes);
+                    .addTo(GG_RecipeMaps.toolCastRecipes);
         }
     }
 }
