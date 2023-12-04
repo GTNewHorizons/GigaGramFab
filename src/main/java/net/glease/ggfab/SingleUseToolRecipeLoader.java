@@ -3,7 +3,7 @@ package net.glease.ggfab;
 import static gregtech.api.enums.ToolDictNames.*;
 import static gregtech.api.util.GT_RecipeBuilder.SECONDS;
 
-import net.glease.ggfab.api.GG_RecipeMaps;
+import net.glease.ggfab.api.GGFabRecipeMaps;
 import net.glease.ggfab.api.GigaGramFabAPI;
 
 import gregtech.api.enums.GT_Values;
@@ -90,10 +90,10 @@ class SingleUseToolRecipeLoader implements Runnable {
                 count *= mod;
             }
             GT_Values.RA.stdBuilder().fluidInputs(material.getMolten(fluids)) //
-                    .metadata(GG_RecipeMaps.OUTPUT_TYPE, type) //
-                    .metadata(GG_RecipeMaps.OUTPUT_COUNT, (int) count) //
+                    .metadata(GGFabRecipeMaps.OUTPUT_TYPE, type) //
+                    .metadata(GGFabRecipeMaps.OUTPUT_COUNT, (int) count) //
                     .eut(TierEU.RECIPE_MV).duration(duration) //
-                    .addTo(GG_RecipeMaps.toolCastRecipes);
+                    .addTo(GGFabRecipeMaps.toolCastRecipes);
         }
     }
 }

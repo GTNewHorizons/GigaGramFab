@@ -2,7 +2,7 @@ package net.glease.ggfab;
 
 import static gregtech.api.enums.ToolDictNames.*;
 import static gregtech.common.items.GT_MetaGenerated_Tool_01.*;
-import static net.glease.ggfab.api.GG_RecipeMaps.toolCastRecipes;
+import static net.glease.ggfab.api.GGFabRecipeMaps.toolCastRecipes;
 
 import java.util.stream.IntStream;
 

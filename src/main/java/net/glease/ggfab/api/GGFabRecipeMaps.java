@@ -19,12 +19,12 @@ import gregtech.api.recipe.RecipeMetadataKey;
 import gregtech.api.recipe.metadata.SimpleRecipeMetadataKey;
 import gregtech.api.util.GT_Recipe;
 
-public class GG_RecipeMaps {
+public class GGFabRecipeMaps {
 
     public static final RecipeMetadataKey<ToolDictNames> OUTPUT_TYPE = SimpleRecipeMetadataKey
             .create(ToolDictNames.class, "output_type");
     public static final RecipeMetadataKey<Integer> OUTPUT_COUNT = SimpleRecipeMetadataKey
-            .create(Integer.class, "output_COUNT");
+            .create(Integer.class, "output_count");
     public static final RecipeMap<RecipeMapBackend> toolCastRecipes = RecipeMapBuilder.of("ggfab.recipe.toolcast")
             .maxIO(1, 4, 1, 0).minInputs(1, 1).progressBar(GT_UITextures.PROGRESSBAR_ARROW, ProgressBar.Direction.RIGHT)
             .recipeEmitter(b -> {
