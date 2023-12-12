@@ -4,14 +4,11 @@ import static gregtech.api.enums.ToolDictNames.*;
 import static gregtech.common.items.GT_MetaGenerated_Tool_01.*;
 import static net.glease.ggfab.api.GGFabRecipeMaps.toolCastRecipes;
 
-import java.util.stream.IntStream;
-
 import net.glease.ggfab.api.GigaGramFabAPI;
 import net.glease.ggfab.items.GGMetaItem_DumbItems;
 import net.glease.ggfab.mte.MTE_AdvAssLine;
 import net.glease.ggfab.mte.MTE_LinkedInputBus;
 import net.glease.ggfab.util.GGUtils;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import cpw.mods.fml.common.Mod;
@@ -19,15 +16,11 @@ import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import gregtech.api.GregTech_API;
-import gregtech.api.enums.GT_Values;
 import gregtech.api.enums.ItemList;
-import gregtech.api.enums.Materials;
 import gregtech.api.enums.OrePrefixes;
 import gregtech.api.enums.SoundResource;
-import gregtech.api.enums.TierEU;
 import gregtech.api.metatileentity.implementations.GT_MetaTileEntity_BasicMachine_GT_Recipe;
 import gregtech.api.util.GT_ProcessingArray_Manager;
-import gregtech.api.util.GT_RecipeConstants;
 
 @Mod(
         modid = GGConstants.MODID,
