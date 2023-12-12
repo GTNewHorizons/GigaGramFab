@@ -136,14 +136,7 @@ public class GigaGramFab {
     public void init(FMLInitializationEvent event) {}
 
     @Mod.EventHandler
-    public void postInit(FMLPostInitializationEvent event) {
-        GT_Values.RA.stdBuilder().itemInputs(
-                IntStream.range(0, 16).mapToObj(ignored -> new ItemStack(Items.diamond)).toArray(ItemStack[]::new))
-                .fluidInputs(Materials.SolderingAlloy.getMolten(1)).itemOutputs(ItemList.Pump_EV.get(1L))
-                .metadata(GT_RecipeConstants.RESEARCH_ITEM, ItemList.Pump_LV.get(1))
-                .metadata(GT_RecipeConstants.RESEARCH_TIME, 1).eut(TierEU.RECIPE_IV).duration(160000)
-                .addTo(GT_RecipeConstants.AssemblyLine);
-    }
+    public void postInit(FMLPostInitializationEvent event) {}
 
     private void initDumbItem1() {
         GGMetaItem_DumbItems i1 = new GGMetaItem_DumbItems("ggfab.d1");
