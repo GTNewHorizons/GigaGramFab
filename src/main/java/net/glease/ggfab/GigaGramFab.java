@@ -1,21 +1,14 @@
 package net.glease.ggfab;
 
-import java.util.stream.IntStream;
-
 import static gregtech.api.enums.ToolDictNames.*;
 import static gregtech.common.items.GT_MetaGenerated_Tool_01.*;
 import static net.glease.ggfab.api.GGFabRecipeMaps.toolCastRecipes;
 
-import gregtech.api.enums.GT_Values;
-import gregtech.api.enums.Materials;
-import gregtech.api.enums.TierEU;
-import gregtech.api.util.GT_RecipeConstants;
 import net.glease.ggfab.api.GigaGramFabAPI;
 import net.glease.ggfab.items.GGMetaItem_DumbItems;
 import net.glease.ggfab.mte.MTE_AdvAssLine;
 import net.glease.ggfab.mte.MTE_LinkedInputBus;
 import net.glease.ggfab.util.GGUtils;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import cpw.mods.fml.common.Mod;
@@ -36,6 +29,7 @@ import gregtech.api.util.GT_ProcessingArray_Manager;
         acceptedMinecraftVersions = "[1.7.10]",
         dependencies = "required-after:IC2;required-before:gregtech")
 public class GigaGramFab {
+
     public static GGMetaItem_DumbItems DUMB_ITEM_1;
 
     public GigaGramFab() {
