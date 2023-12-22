@@ -474,6 +474,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     @Override
     protected void startRecipeProcessing() {
         if (!processing) {
+            Arrays.fill(itemInputsCurTick, NOT_CHECKED);
             super.startRecipeProcessing();
             processing = true;
         }
@@ -530,12 +531,6 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     @Override
     public RecipeMap<?> getRecipeMap() {
         return RecipeMaps.assemblylineVisualRecipes;
-    }
-
-    @Override
-    public void onPreTick(IGregTechTileEntity aBaseMetaTileEntity, long aTick) {
-        Arrays.fill(itemInputsCurTick, NOT_CHECKED);
-        super.onPreTick(aBaseMetaTileEntity, aTick);
     }
 
     @Override
