@@ -185,7 +185,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private int currentInputLength;
     private String lastStopReason = "";
     private int currentRecipeParallel = 1;
-    private static final int BATCH_MODE_PARALLEL = 128;
+    private static final int BATCH_MODE_MIN_TICK_TIME = 128;
 
     public MTE_AdvAssLine(int aID, String aName, String aNameRegional) {
         super(aID, aName, aNameRegional);
@@ -780,17 +780,28 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                         mMaxProgresstime = laserOverclock.getDuration();
                     }
                 }
+                // Save this for batch mode parallel calculations
+                int timePerSlice = mMaxProgresstime;
                 // correct the recipe duration
                 mMaxProgresstime *= recipe.mInputs.length;
 
                 // Finally apply batch mode parallels if possible.
                 // For this we need to verify the first item slot and all fluids slots have enough resources
                 // to execute parallels.
-                if (super.isBatchModeEnabled()) {
+                // Note that we skip this entirely if the time for each slice is more than 128 ticks,
+                // since in this case the amount of batches will always be 1
+                if (super.isBatchModeEnabled() && timePerSlice < BATCH_MODE_MIN_TICK_TIME) {
+                    // Calculate parallel based on time per slice, and the amount of items in the first slot.
+                    // If there is not enough fluid, no batching will be done.
+
                     ItemStack firstItemSlot = getInputBusContent(0);
-                    if (firstItemSlot.stackSize >= BATCH_MODE_PARALLEL * recipe.mInputs[0].stackSize
-                            && hasAllFluids(recipe, BATCH_MODE_PARALLEL)) {
-                        this.currentRecipeParallel = BATCH_MODE_PARALLEL;
+                    int recipesAvailable = Math.floorDiv(firstItemSlot.stackSize, recipe.mInputs[0].stackSize);
+                    int desiredBatches = (int) Math.ceil((float) BATCH_MODE_MIN_TICK_TIME / (float) timePerSlice);
+                    int parallel = Math.min(recipesAvailable, desiredBatches);
+                    // We no longer need to check if we have enough items in the first slot, as this is
+                    // guaranteed by taking the minimum earlier.
+                    if (hasAllFluids(recipe, parallel)) {
+                        this.currentRecipeParallel = parallel;
                         // Update recipe duration with final batch mode multiplier
                         mMaxProgresstime *= this.currentRecipeParallel;
                     }
