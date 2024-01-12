@@ -404,7 +404,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                     inputVoltage = aNBT.getLong("inputV");
                     inputEUt = aNBT.getLong("inputEU");
                     baseEUt = aNBT.getLong("baseEU");
-                    currentRecipeParallel= aNBT.getInteger("currentParallel");
+                    currentRecipeParallel = aNBT.getInteger("currentParallel");
                     if (inputVoltage <= 0 || inputEUt <= 0 || baseEUt >= 0) {
                         criticalStopMachine("ggfab.gui.advassline.shutdown.load.energy");
                         loadedStack = null;
