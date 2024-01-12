@@ -594,7 +594,6 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         }
 
         if (getBaseMetaTileEntity().isAllowedToWork()) {
-            // Do we need to include parallel in hasAllItems() here as well?
             if (hasAllItems(currentRecipe, this.currentRecipeParallel)
                     && hasAllFluids(currentRecipe, this.currentRecipeParallel)
                     && slices[0].start()) {
@@ -614,7 +613,11 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (index < mInputBusses.size()) {
                 GT_MetaTileEntity_Hatch_InputBus bus = mInputBusses.get(index);
                 if (bus.isValid()) {
-                    stuff = bus.getStackInSlot(0);
+                    // This limits items extracted per slice to 64. Normally this is not an issue, but with batch
+                    // mode it can suddenly cause the AAL to get stuck because it thinks there are not enough
+                    // items in the bus. I'm not quite sure how to get around this, even though it should not matter
+                    // in practice since all AAL automation uses stocking buses instead of regular input buses.
+                    stuff = bus.getStackInSlot(0).copy();
                 }
             }
             itemInputsCurTick[index] = stuff;
