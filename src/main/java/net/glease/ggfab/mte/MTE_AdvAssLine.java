@@ -617,7 +617,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                     // mode it can suddenly cause the AAL to get stuck because it thinks there are not enough
                     // items in the bus. I'm not quite sure how to get around this, even though it should not matter
                     // in practice since all AAL automation uses stocking buses instead of regular input buses.
-                    stuff = bus.getStackInSlot(0).copy();
+                    stuff = bus.getStackInSlot(0);
                 }
             }
             itemInputsCurTick[index] = stuff;
