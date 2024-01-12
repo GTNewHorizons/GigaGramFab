@@ -185,7 +185,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private int currentInputLength;
     private String lastStopReason = "";
     private int currentRecipeParallel = 1;
-    private static final int BATCH_MODE_PARALLEL = 4;
+    private static final int BATCH_MODE_PARALLEL = 128;
 
     public MTE_AdvAssLine(int aID, String aName, String aNameRegional) {
         super(aID, aName, aNameRegional);
