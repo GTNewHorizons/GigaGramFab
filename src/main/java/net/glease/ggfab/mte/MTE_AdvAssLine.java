@@ -979,13 +979,14 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     @Override
     public boolean onWireCutterRightClick(ForgeDirection side, ForgeDirection wrenchingSide, EntityPlayer aPlayer,
             float aX, float aY, float aZ) {
-        batchMode = !batchMode;
-        if (batchMode) {
-            GT_Utility.sendChatToPlayer(aPlayer, "Batch recipes");
-        } else {
-            GT_Utility.sendChatToPlayer(aPlayer, "Don't batch recipes");
+        if (aPlayer.isSneaking()) {
+            batchMode = !batchMode;
+            if (batchMode) {
+                GT_Utility.sendChatToPlayer(aPlayer, "Batch recipes");
+            } else {
+                GT_Utility.sendChatToPlayer(aPlayer, "Don't batch recipes");
+            }
         }
-
         return true;
     }
 
