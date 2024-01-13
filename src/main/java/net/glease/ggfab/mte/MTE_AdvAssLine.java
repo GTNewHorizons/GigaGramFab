@@ -802,7 +802,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
                     ItemStack firstItemSlot = getInputBusContent(0);
                     int recipesAvailable = Math.floorDiv(firstItemSlot.stackSize, recipe.mInputs[0].stackSize);
-                    int desiredBatches = (int) Math.ceil((float) BATCH_MODE_MIN_TICK_TIME / (float) timePerSlice);
+                    int desiredBatches = Math.floorDiv(BATCH_MODE_MIN_TICK_TIME, timePerSlice);
                     int parallel = Math.min(recipesAvailable, desiredBatches);
                     // We no longer need to check if we have enough items in the first slot, as this is
                     // guaranteed by taking the minimum earlier.
