@@ -35,6 +35,7 @@ import net.glease.ggfab.GGConstants;
 import net.glease.ggfab.mui.ClickableTextWidget;
 import net.glease.ggfab.util.OverclockHelper;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
@@ -972,6 +973,19 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
     @Override
     public boolean supportsBatchMode() {
+        return true;
+    }
+
+    @Override
+    public boolean onWireCutterRightClick(ForgeDirection side, ForgeDirection wrenchingSide, EntityPlayer aPlayer,
+            float aX, float aY, float aZ) {
+        batchMode = !batchMode;
+        if (batchMode) {
+            GT_Utility.sendChatToPlayer(aPlayer, "Batch recipes");
+        } else {
+            GT_Utility.sendChatToPlayer(aPlayer, "Don't batch recipes");
+        }
+
         return true;
     }
 
