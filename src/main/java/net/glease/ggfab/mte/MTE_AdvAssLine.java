@@ -802,6 +802,11 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
 
                     ItemStack firstItemSlot = getInputBusContent(0);
                     int recipesAvailable = Math.floorDiv(firstItemSlot.stackSize, recipe.mInputs[0].stackSize);
+                    // Divide recipes available by the amount of slices in the recipe. This will prevent the AAL from
+                    // batching instead of parallelizing, which would make it effectively slower.
+                    recipesAvailable = Math.floorDiv(recipesAvailable, recipe.mInputs.length);
+                    // Sanity check to avoid this being zero when there is only one recipe available.
+                    recipesAvailable = Math.max(recipesAvailable, 1);
                     int desiredBatches = Math.floorDiv(BATCH_MODE_MIN_TICK_TIME, timePerSlice);
                     int parallel = Math.min(recipesAvailable, desiredBatches);
                     // We no longer need to check if we have enough items in the first slot, as this is
