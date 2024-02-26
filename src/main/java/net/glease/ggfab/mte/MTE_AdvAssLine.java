@@ -186,7 +186,9 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     private int currentInputLength;
     private String lastStopReason = "";
     private int currentRecipeParallel = 1;
-    private static final int BATCH_MODE_MIN_TICK_TIME = 128;
+    // Batch mode will increase parallel per slice to try to get as close as possible to this amount of ticks
+    // per slice, but will never go over this amount.
+    private static final int BATCH_MODE_DESIRED_TICKS_PER_SLICE = 128;
 
     public MTE_AdvAssLine(int aID, String aName, String aNameRegional) {
         super(aID, aName, aNameRegional);
@@ -794,9 +796,9 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                 // Finally apply batch mode parallels if possible.
                 // For this we need to verify the first item slot and all fluids slots have enough resources
                 // to execute parallels.
-                // Note that we skip this entirely if the time for each slice is more than 128 ticks,
-                // since in this case the amount of batches will always be 1
-                if (super.isBatchModeEnabled() && timePerSlice < BATCH_MODE_MIN_TICK_TIME) {
+                // Note that we skip this entirely if the time for each slice is more than
+                // BATCH_MODE_DESIRED_TICKS_PER_SLICE ticks, since in this case the amount of batches will always be 1
+                if (super.isBatchModeEnabled() && timePerSlice < BATCH_MODE_DESIRED_TICKS_PER_SLICE) {
                     // Calculate parallel based on time per slice, and the amount of items in the first slot.
                     // If there is not enough fluid, no batching will be done.
 
@@ -807,7 +809,10 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                     recipesAvailable = Math.floorDiv(recipesAvailable, recipe.mInputs.length);
                     // Sanity check to avoid this being zero when there is only one recipe available.
                     recipesAvailable = Math.max(recipesAvailable, 1);
-                    int desiredBatches = Math.floorDiv(BATCH_MODE_MIN_TICK_TIME, timePerSlice);
+                    int desiredBatches = Math.floorDiv(BATCH_MODE_DESIRED_TICKS_PER_SLICE, timePerSlice);
+                    // Limit the amount of parallel to both the amount of recipes available and the maximum number
+                    // of batches we want to run. The latter is done to prevent batch mode from ever going above
+                    // BATCH_MODE_DESIRED_TICKS_PER_SLICE ticks per slice (see also where it is defined above).
                     int parallel = Math.min(recipesAvailable, desiredBatches);
                     // We no longer need to check if we have enough items in the first slot, as this is
                     // guaranteed by taking the minimum earlier.
