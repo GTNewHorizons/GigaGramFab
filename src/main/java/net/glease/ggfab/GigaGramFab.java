@@ -30,6 +30,8 @@ import gregtech.api.util.GT_ProcessingArray_Manager;
         dependencies = "required-after:IC2;required-before:gregtech")
 public class GigaGramFab {
 
+    public static GGMetaItem_DumbItems DUMB_ITEM_1;
+
     public GigaGramFab() {
         // initialize the textures
         // noinspection ResultOfMethodCallIgnored
@@ -39,6 +41,7 @@ public class GigaGramFab {
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         GregTech_API.sAfterGTPreload.add(() -> {
+            initDumbItem1();
             GGItemList.AdvAssLine.set(
                     new MTE_AdvAssLine(13532, "ggfab.machine.adv_assline", "Advanced Assembly Line").getStackForm(1));
             GGItemList.LinkedInputBus.set(
@@ -122,7 +125,7 @@ public class GigaGramFab {
         GregTech_API.sBeforeGTPostload.add(new SingleUseToolRecipeLoader());
         ConfigurationHandler.INSTANCE.init(event.getSuggestedConfigurationFile());
 
-        initDumbItem1();
+        DUMB_ITEM_1 = new GGMetaItem_DumbItems("ggfab.d1");
     }
 
     @Mod.EventHandler
@@ -132,7 +135,6 @@ public class GigaGramFab {
     public void postInit(FMLPostInitializationEvent event) {}
 
     private void initDumbItem1() {
-        GGMetaItem_DumbItems i1 = new GGMetaItem_DumbItems("ggfab.d1");
         int id = 0;
         {
             int idShape = 30;
@@ -142,7 +144,7 @@ public class GigaGramFab {
             for (GGItemList i : GGItemList.values()) {
                 ItemStack stack = null;
                 if (i.name().startsWith(prefix)) {
-                    stack = i1.addItem(
+                    stack = DUMB_ITEM_1.addItem(
                             id++,
                             "Single Use "
                                     + GGUtils.processSentence(i.name().substring(prefix.length()), ' ', true, true),
@@ -150,7 +152,7 @@ public class GigaGramFab {
                             i,
                             i.name().substring("One_Use_".length()));
                 } else if (i.name().startsWith(prefix2)) {
-                    stack = i1.addItem(
+                    stack = DUMB_ITEM_1.addItem(
                             idShape++,
                             "Tool Casting Mold ("
                                     + GGUtils.processSentence(i.name().substring(prefix2.length()), ' ', true, true)
