@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
+import appeng.api.networking.storage.IStorageGrid;
 import net.glease.ggfab.ConfigurationHandler;
 import net.glease.ggfab.GGConstants;
 import net.glease.ggfab.mui.ClickableTextWidget;
@@ -659,12 +660,13 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
             if (proxy == null || !proxy.isActive()) {
                 return stuff;
             }
+            IStorageGrid proxyStorage;
             try {
-                meNetwork[index] = proxy.getStorage();
-            } catch (GridAccessException ignored) {}
-            if (meNetwork[index] == null) {
+                proxyStorage = proxy.getStorage();
+            } catch (GridAccessException ex) {
                 return stuff;
             }
+            meNetwork[index] = proxyStorage;
             for (int i = 0; i < meNetwork.length; i++) {
                 if (i == index) {
                     continue;
