@@ -68,6 +68,8 @@ import com.gtnewhorizons.modularui.common.widget.FakeSyncWidget;
 import com.gtnewhorizons.modularui.common.widget.SlotWidget;
 import com.gtnewhorizons.modularui.common.widget.TextWidget;
 
+import appeng.me.GridAccessException;
+import appeng.me.helpers.AENetworkProxy;
 import gregtech.api.GregTech_API;
 import gregtech.api.enums.GT_Values;
 import gregtech.api.enums.ItemList;
@@ -186,6 +188,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     // items to use in current startRecipeProcessing()/endRecipeProcessing() batch
     // calling get stack multiple times in the same batch might cause problems with certain hatches
     private final ItemStack[] itemInputsCurBatch = new ItemStack[16];
+    private final Object[] meNetwork = new Object[16];
     private final boolean[] sortHatches = new boolean[16];
     private boolean sortFluidHatches;
     private int currentInputLength;
@@ -491,6 +494,8 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
     protected void startRecipeProcessing() {
         if (!processing) {
             Arrays.fill(itemInputsCurBatch, NOT_CHECKED);
+            // clean this again in case we crashed in last recipe processing batch
+            Arrays.fill(meNetwork, null);
             Arrays.fill(sortHatches, false);
             sortFluidHatches = false;
             super.startRecipeProcessing();
@@ -513,6 +518,8 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         }
         super.endRecipeProcessing();
         processing = false;
+        // eagerly clean the reference to prevent accidental memory leak
+        Arrays.fill(meNetwork, null);
     }
 
     @Override
@@ -630,18 +637,46 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
         if (itemInputsCurBatch[index] == NOT_CHECKED) {
             ItemStack stuff = null;
             if (index < mInputBusses.size()) {
-                GT_MetaTileEntity_Hatch_InputBus bus = mInputBusses.get(index);
-                if (bus.isValid()) {
-                    // This limits items extracted per slice to 64. Normally this is not an issue, but with batch
-                    // mode it can suddenly cause the AAL to get stuck because it thinks there are not enough
-                    // items in the bus. I'm not quite sure how to get around this, even though it should not matter
-                    // in practice since all AAL automation uses stocking buses instead of regular input buses.
-                    stuff = bus.getStackInSlot(0);
-                }
+                stuff = getRealInputBusContent(index);
             }
             itemInputsCurBatch[index] = stuff;
         }
         return itemInputsCurBatch[index];
+    }
+
+    private ItemStack getRealInputBusContent(int index) {
+        GT_MetaTileEntity_Hatch_InputBus bus = mInputBusses.get(index);
+        if (bus.isValid()) {
+            // This limits items extracted per slice to 64. Normally this is not an issue, but with batch
+            // mode it can suddenly cause the AAL to get stuck because it thinks there are not enough
+            // items in the bus. I'm not quite sure how to get around this, even though it should not matter
+            // in practice since all AAL automation uses stocking buses instead of regular input buses.
+            ItemStack stuff = bus.getStackInSlot(0);
+            if (stuff == null) {
+                return null;
+            }
+            AENetworkProxy proxy = bus.getProxy();
+            if (proxy == null || !proxy.isActive()) {
+                return stuff;
+            }
+            try {
+                meNetwork[index] = proxy.getStorage();
+            } catch (GridAccessException ignored) {}
+            if (meNetwork[index] == null) {
+                return stuff;
+            }
+            for (int i = 0; i < meNetwork.length; i++) {
+                if (i == index) {
+                    continue;
+                }
+                if (meNetwork[i] == meNetwork[index]
+                        && GT_Utility.areStacksEqual(stuff, itemInputsCurBatch[i], false)) {
+                    return itemInputsCurBatch[i];
+                }
+            }
+            return stuff;
+        }
+        return null;
     }
 
     private FluidStack getInputHatchContent(int index) {
