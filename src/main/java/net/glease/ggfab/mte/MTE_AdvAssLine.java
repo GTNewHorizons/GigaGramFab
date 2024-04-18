@@ -1076,7 +1076,7 @@ public class MTE_AdvAssLine extends GT_MetaTileEntity_ExtendedPowerMultiBlockBas
                     .getMatchedIngredientAmount(stack, currentRecipe.mInputs[id], currentRecipe.mOreDictAlt[id]);
             if (size < 0 || stack.stackSize < size * currentRecipeParallel) return false;
             progress = mMaxProgresstime / currentInputLength;
-            stack.stackSize -= size;
+            stack.stackSize -= size * currentRecipeParallel;
             mInputBusses.get(id).updateSlots();
             return true;
         }
